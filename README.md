@@ -7,7 +7,7 @@ Factor research toolkit that reads cleaned Parquet outputs from the data pipelin
 - Create env: `conda env create -f quantlab_env/environment.yml` (includes numpy, pandas, pyarrow, scipy, etc.).
 - Run default factors:  
   `python -m quantlab_factor_library.run_factors`
-- Example usage (clickable): `notebooks/factor_demo.ipynb`
+- Example usage: [`notebooks/factor_demo.ipynb`](notebooks/factor_demo.ipynb)
 
 ## What’s inside
 - `quantlab_factor_library/paths.py` – resolves repo and data roots (configurable).
