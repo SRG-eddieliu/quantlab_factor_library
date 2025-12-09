@@ -77,11 +77,15 @@ def summarize_analytics(ic: pd.Series, ac: pd.Series, decile_spread: pd.Series, 
     ic_std = ic.std(ddof=1) if len(ic) > 1 else np.nan
     ic_tstat = mean_ic / (ic_std / np.sqrt(len(ic))) if len(ic) > 1 and ic_std and ic_std > 0 else np.nan
     ic_ir = mean_ic / ic_std if ic_std and ic_std > 0 else np.nan
+    ic_hit_rate = (ic > 0).mean() if len(ic) else np.nan
+    recent_ic_mean = ic.tail(60).mean() if len(ic) else np.nan
 
     summary = {
         "mean_ic": mean_ic,
         "ic_tstat": ic_tstat,
         "ic_ir": ic_ir,
+        "ic_hit_rate": ic_hit_rate,
+        "recent_ic_mean_60d": recent_ic_mean,
         "mean_autocorr": ac.mean() if not ac.empty else np.nan,
         "avg_decile_spread": decile_spread.mean() if not decile_spread.empty else np.nan,
     }
@@ -102,6 +106,15 @@ def update_registry(factor_name: str, summary: Dict[str, float], registry_path: 
     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
     df.to_parquet(registry, index=False)
     logger.info("Updated factor registry at %s", registry)
+
+    # Keep an in-repo reference copy for visibility/versioning (overwrites with latest).
+    ref_dir = repo_root() / "diagnostics"
+    ref_dir.mkdir(parents=True, exist_ok=True)
+    ref_parquet = ref_dir / "factor_analytics_summary.parquet"
+    ref_csv = ref_dir / "factor_analytics_summary.csv"
+    df.to_parquet(ref_parquet, index=False)
+    df.to_csv(ref_csv, index=False)
+    logger.info("Updated diagnostics reference registry at %s and %s", ref_parquet, ref_csv)
     return registry
 
 
@@ -171,6 +184,8 @@ def compute_all_analytics(
         summary["ls_return_std"] = ls_diag.get("ls_return_std")
         summary["ls_sharpe"] = ls_diag.get("ls_sharpe")
         summary["ls_max_drawdown"] = ls_diag.get("ls_max_drawdown")
+        summary["ls_sharpe_last_yr"] = ls_diag.get("ls_sharpe_last_yr")
+        summary["ls_max_drawdown_last_yr"] = ls_diag.get("ls_max_drawdown_last_yr")
         ff_reg = ls_diag.get("ff_regression") or {}
         for k, v in ff_reg.items():
             summary[f"ff_{k}"] = v
@@ -291,6 +306,9 @@ def diagnostic_ls_backtest(
     ls_std = ls.std(ddof=1)
     ls_sharpe = sharpe_ratio(ls)
     ls_mdd = max_drawdown(ls)
+    recent = ls.tail(252)
+    ls_sharpe_last_yr = sharpe_ratio(recent)
+    ls_mdd_last_yr = max_drawdown(recent)
     ff_reg = regress_on_ff(ls, ff_factors) if ff_factors is not None else {}
     return {
         "ls_returns": ls,
@@ -298,6 +316,8 @@ def diagnostic_ls_backtest(
         "ls_return_std": ls_std,
         "ls_sharpe": ls_sharpe,
         "ls_max_drawdown": ls_mdd,
+        "ls_sharpe_last_yr": ls_sharpe_last_yr,
+        "ls_max_drawdown_last_yr": ls_mdd_last_yr,
         "ff_regression": ff_reg,
     }
 

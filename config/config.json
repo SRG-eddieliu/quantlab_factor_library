@@ -1,5 +1,19 @@
 {
   "data_root": "../data",
   "final_dir": "../data/data-processed",
-  "factors_dir": "../data/factors"
+  "factors_dir": "../data/factors",
+  "factor_defaults": {
+    "winsor_limits": [0.01, 0.99],
+    "min_coverage": 0.3,
+    "fill_method": "median",
+    "neutralize_method": "sector",
+    "forward_fill": true
+  },
+  "factor_overrides": {
+    "earnings_surprise": {
+      "min_coverage": 0.0,
+      "fill_method": null,
+      "forward_fill": false
+    }
+  }
 }
