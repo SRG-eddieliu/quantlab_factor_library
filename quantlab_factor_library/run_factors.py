@@ -176,9 +176,11 @@ def compute_correlations_only(
     if ff is not None and ls_returns:
         ff_corr = corr_with_ff(ls_returns, ff)
         if not ff_corr.empty:
-            ff_corr_path = factors_dir() / "factor_ff_correlation.parquet"
-            ff_corr.to_parquet(ff_corr_path)
-            logger.info("Saved factor vs FF correlation to %s", ff_corr_path)
+            ff_corr_path = save_correlation_matrix(
+                ff_corr,
+                path=factors_dir() / "factor_ff_correlation.parquet",
+                ref_name="factor_ff_correlation",
+            )
     return corr_path, ff_corr_path
 
 
@@ -206,7 +208,14 @@ def run_time_effects(
         out = factors_dir() / "factor_rolling_analytics.parquet"
         out.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(out, index=False)
-        logger.info("Saved rolling analytics to %s", out)
+        # Diagnostics copies (Parquet + CSV) for quick inspection
+        diag_dir = Path(__file__).resolve().parents[1] / "diagnostics"
+        diag_dir.mkdir(parents=True, exist_ok=True)
+        diag_parquet = diag_dir / "factor_rolling_analytics.parquet"
+        diag_csv = diag_dir / "factor_rolling_analytics.csv"
+        df.to_parquet(diag_parquet, index=False)
+        df.to_csv(diag_csv, index=False)
+        logger.info("Saved rolling analytics to %s and diagnostics copies to %s/%s", out, diag_dir, diag_csv.name)
     return df
 
 

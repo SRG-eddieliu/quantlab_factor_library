@@ -219,11 +219,16 @@ def compute_factor_correlation(scores: dict[str, pd.DataFrame], method: str = "p
     return aligned.corr(method=method)
 
 
-def save_correlation_matrix(corr: pd.DataFrame, path: Path | None = None) -> Path:
-    out_path = path or factors_dir() / "factor_correlation.parquet"
+def save_correlation_matrix(corr: pd.DataFrame, path: Path | None = None, ref_name: str = "factor_correlation") -> Path:
+    out_path = path or factors_dir() / f"{ref_name}.parquet"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     corr.to_parquet(out_path)
-    logger.info("Saved factor correlation matrix to %s", out_path)
+    # Reference copies for quick inspection (Parquet + CSV) in diagnostics
+    ref_dir = repo_root() / "diagnostics"
+    ref_dir.mkdir(parents=True, exist_ok=True)
+    corr.to_parquet(ref_dir / f"{ref_name}.parquet")
+    corr.to_csv(ref_dir / f"{ref_name}.csv")
+    logger.info("Saved factor correlation matrix to %s and diagnostics/%s.(parquet,csv)", out_path, ref_name)
     return out_path
 
 
