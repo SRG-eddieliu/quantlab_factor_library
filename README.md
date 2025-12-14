@@ -58,7 +58,7 @@ Use the notebooks to see the sequence; re-run analytics/correlations/rolling wit
 | 18 | downside_beta_252d | Beta on down-market days | Bad-beta exposure |
 | 19 | coskewness_252d | Beta to squared market returns measuring how stock co-move with mkt vol | high coskewness lower fwd ret |
 | 20 | dollar_volume_20d | 20d avg price×volume | Liquidity capacity; can be used as liquidity filter |
-| 21 | amihud_illiq_20d | Mean(|ret|/dollar vol) 20d | Price impact per trading volume (illiquidity), high idicating illiquidity lower fwd ret |
+| 21 | amihud_illiq_20d | Mean(ret/dollar vol) 20d | Price impact per trading volume (illiquidity), high idicating illiquidity lower fwd ret |
 | 22 | amihud_illiq_log_20d | Log-stabilized illiquidity 20d | Same as above, smoother |
 | 23 | amihud_illiq_252d | Annual illiquidity | Structural illiquidity premium |
 | 24 | turnover | Volume ÷ shares | Attention/churn |
