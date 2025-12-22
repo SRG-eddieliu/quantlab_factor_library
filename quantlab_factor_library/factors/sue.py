@@ -19,7 +19,8 @@ class StandardizedUnexpectedEarnings(FactorBase):
         df = data_loader.load_long(dataset="fundamentals_earnings")
         if "period_type" in df.columns:
             df = df[df["period_type"] == "quarterly"]
-        df["date"] = pd.to_datetime(df.get("reportedDate", df.get("fiscalDateEnding")), errors="coerce").dt.date
+        dt = pd.to_datetime(df.get("reportedDate", df.get("fiscalDateEnding")), errors="coerce")
+        df["date"] = (dt + pd.tseries.offsets.BusinessDay(2)).dt.date
         df["reportedEPS"] = pd.to_numeric(df["reportedEPS"], errors="coerce")
         df["estimatedEPS"] = pd.to_numeric(df["estimatedEPS"], errors="coerce")
         df = df.dropna(subset=["ticker", "date"])

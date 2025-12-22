@@ -25,11 +25,13 @@ class EarningsSurprise(FactorBase):
             df = df[df["period_type"] == "quarterly"]
 
         date_col = "reportedDate" if "reportedDate" in df.columns else "fiscalDateEnding"
-        df[date_col] = pd.to_datetime(df[date_col], errors="coerce").dt.date
+        dt = pd.to_datetime(df[date_col], errors="coerce")
+        # Lag by 2 business days to reduce look-ahead
+        df["date"] = (dt + pd.tseries.offsets.BusinessDay(2)).dt.date
         surprise = pd.to_numeric(df.get("surprisePercentage", pd.NA), errors="coerce")
         df["surprise_pct"] = surprise
         agg = (
-            df.groupby([date_col, "ticker"])["surprise_pct"]
+            df.groupby(["date", "ticker"])["surprise_pct"]
             .mean()
             .unstack()
             .sort_index()

@@ -1,6 +1,5 @@
 # QuantLab Factor Library
-
-QuantLab Factor Library is a plug‑and‑play toolkit for building and evaluating equity factor signals on top of the cleaned outputs from the data pipeline. It loads wide price/sector data and Fama‑French benchmarks, computes forward returns, and provides 50+ prebuilt factors across momentum, reversal, volatility/tail risk, liquidity/flow, value, quality, growth, capital actions, estimates/events, and forensic integrity. Each factor subclasses a common FactorBase, runs its raw computation, and then passes through a standardized cleaning pipeline (coverage filter, winsorization, fill, sector/global neutralization, z‑score) with overrides via config/config.json.
+QuantLab Factor Library is a plug‑and‑play toolkit for building and evaluating equity factor signals on top of the cleaned outputs from the data pipeline. It loads wide price/sector data and Fama‑French benchmarks, computes forward returns, and provides 50+ prebuilt factors. Each factor subclasses a common FactorBase via inheritance, runs its raw computation, and then passes through a standardized cleaning pipeline (coverage filter, winsorization, fill, sector/global neutralization, z‑score) with overrides via config/config.json.
 
 The runner supports modular steps: compute factors (optionally in parallel), run analytics (IC/IR, decile monotonicity, LS Sharpe/DD with FF regressions), compute cross-factor and FF correlations, and generate rolling IC/IR time effects. Outputs are written to data/factors as long-format Parquet (one file per factor and LS PnL), with registry and correlation files plus CSV mirrors in diagnostics for quick inspection. Two notebooks (factor_demo, factor_parallel_demo) show the full workflow and how to rerun analytics without recomputing factors. Use the default catalog or extend it by adding new factor classes and tuning cleaning/neutralization per factor.
 
@@ -63,7 +62,7 @@ Use the notebooks to see the sequence; re-run analytics/correlations/rolling wit
 | 21 | amihud_illiq_20d | Mean(abs(ret)/dollar vol) 20d | Price impact per trading volume (illiquidity), high idicating illiquidity lower fwd ret |
 | 22 | amihud_illiq_log_20d | Log-stabilized illiquidity 20d | Same as above, smoother |
 | 23 | amihud_illiq_252d | Annual illiquidity | Structural illiquidity premium |
-| 24 | turnover | Volume ÷ shares | Attention/churn |
+| 24 | turnover | Volume/shares | Attention/churn |
 | 25 | obv | on balance volume; cumulative sum(volume_updays-volume_downdays) | Flow pressure |
 | 26 | earnings_yield | TTM net income / mkt cap | Cheapness (value) |
 | 27 | book_to_price | Book per share / price | Cheap vs book |
@@ -86,12 +85,45 @@ Use the notebooks to see the sequence; re-run analytics/correlations/rolling wit
 | 44 | dividend_yield_ttm | Trailing 12m dividends / price | Income/defensive |
 | 45 | dividend_growth | YoY dividend growth | Payout momentum |
 | 46 | piotroski_fscore | 0–9 composite quality | Balance-sheet/earnings health |
-| 47 | analyst_revision_eps_30d | Net EPS estimate revisions (#analyst increased EPS est - decrease) 30d | Info drift from revisions |
+| 47 | analyst_revision_eps_30d | Net EPS estimate revisions (#analyst increased EPS est - decrease) 30d, carried forward max 30 trading days | Info drift from revisions |
 | 48 | earnings_surprise | qtr; (reportedEPS - estEPS)/estEPS | Post-earnings drift |
 | 49 | sue | Surprise / rolling 8q std | Standardized surprise |
 | 50 | benford_chi2_d1 | First-digit Benford chi-square | Accounting conformity (lower better) |
 | 51 | benford_chi2_d2 | Second-digit Benford chi-square | Accounting conformity (lower better) |
+| 52 | composite_momentum | Exp-weighted mix of 21/63/126/252d stock returns (skip last 21d) | Recency-weighted trend |
+| 53 | industry_co_momentum | Sector average returns, exp-weighted 21/63/126/252d (skip 21d), same score to members | Sector trend/leadership |
+| 54 | volume_inclusive_icm | Sector average of return×volume, exp-weighted buckets (21/63/126/252d), skip 21d | Flow-weighted sector momentum |
+| 55 | industry_co_reversal | Sector reversal: exp-weighted 21/63d sector returns, skip 5d, sign flipped | Sector mean-revert tilt |
+| 56 | size_log_total_assets | Log total assets (quarterly, ffill) | Size proxy (smaller = higher expected return) |
+| 57 | size_log_enterprise_value | Log enterprise value (price×shares + debt − cash, quarterly, ffill) | Size proxy (smaller EV = higher expected return) |
+| 58 | size_log_revenue | Log total revenue (quarterly, ffill) | Size proxy (smaller revenue = higher expected return) |
 
+### Thematic composites (config-driven)
+- Defined in `config/config.json` under `composites`: name, factors, optional `sign` map (+1/-1), and `weight_method` (`equal`, `inv_vol`, `ic_ir`).
+- Weighting options:  
+  - `equal`: equal weights.  
+  - `inv_vol`: 1 / volatility (prefers LS return std if available; else factor std), normalized.  
+  - `ic_ir`: weights proportional to IC IR (from factor analytics).
+- Build + diagnose via `run_composite_pipeline` (build, full analytics, save diagnostics) or `build_composites_from_config` + `analyze_composites`.
+- Included themes:  
+  - `theta_momentum_riskadj`: momentum_12m, residual_momentum_12m, volatility_60d (-), downside_vol_60d (-), industry_momentum.  
+  - `theta_pure_value`: earnings_yield, book_to_price, ev_to_ebitda_inv, cashflow_yield, free_cashflow_yield.  
+  - `theta_pure_quality`: profitability_roe, roa, gross_profitability, piotroski_fscore, accruals (-).  
+  - `theta_shortterm_reversal`: mean_reversion_5d, max_daily_return_1m (-), high52w_proximity (-).  
+  - `theta_growth_acceleration`: sales_growth, sales_growth_accel, rd_intensity, dividend_growth.  
+  - `theta_info_forensic_drift`: sue, earnings_surprise, analyst_revision_eps_30d, benford_chi2_d1 (-), benford_chi2_d2 (-).  
+  - `theta_structural_liquidity`: dollar_volume_20d (-), amihud_illiq_252d, amihud_illiq_log_20d, turnover (-).  
+  - `theta_systematic_risk`: beta_252d (-), residual_vol_252d (-), downside_beta_252d (-), leverage (-), asset_growth (-), investment_to_assets (-), net_issuance (-).  
+  - `theta_size_smallcap`: size_log_mktcap (-), size_log_total_assets (-), size_log_enterprise_value (-), size_log_revenue (-).
+
+Notebook flow (see `notebooks/factor_parallel_demo.ipynb`):
+- Build/diagnose composites under all weightings (equal/inv_vol/ic_ir), using `run_composite_pipeline` with `ic_map` (IC IR) and `ls_vol_map` (LS vol) from base factor analytics.
+- Compare IC IR across weightings; select the best weighting per composite via `select_best_weights`.
+- Re-run best composites, saving full diagnostics to `diagnostics/`:
+  - `composite_analytics_summary.parquet/csv` (IC/IR, LS stats, FF regression, deciles).  
+  - `composite_correlation.parquet/csv` and `composite_ff_correlation.parquet/csv`.
+- Weighting for composites uses a 50/50 blend of full-sample IC IR and 12m IC when `blend_12m=True` (see notebook), plus LS vol for `inv_vol` weighting.
+- Each composite and its LS PnL are also saved to `data/factors/` (wide→long parquet) alongside the raw factors.
 
 ## Outputs
 - Factors: `../data/factors/factor_<name>.parquet` (long format: Date, Ticker, Value).
@@ -107,10 +139,16 @@ Use the notebooks to see the sequence; re-run analytics/correlations/rolling wit
 - Z-score cross-sectionally. (stock selection alpha instead of global alpha overlay)
 - drop all-NaN dates.
 
+## Data handling notes
+- Fundamental tables are treated as quarterly-only in factor code; date alignment comes from the pipeline’s `fiscalDateEnding + 2 business days` when available.
+- Slow-moving fundamentals (e.g., earnings yield, size proxies) are forward-filled to daily to avoid empty windows.
+- Analyst revisions (`analyst_revision_eps_30d`) fill missing up/down counts with 0 before netting to avoid losing dates, then only carry forward for 30 trading days to avoid stale signals.
+- Event-style factors (earnings_surprise, SUE) remain point-in-time; avoid forward fill to reduce look-ahead.
+
 ## Extending
-- Build new factors by subclassing `FactorBase` or parameterizing existing classes (e.g., Momentum with different lookback/skip).
+- Abstract Base Class (ABC) architecture being used with base class `FactorBase` and mandatory methods `compute_raw_factor` and `post_process` which every specific factor implementation must inherit and override. The main execution script dynamically iterate through a list of factor classes, instantiate them, and call their respective methods without needing to know the complex internal calculation logic of each specific factor. This achieves the goal of modularity: allowing new factors to be added simply by creating a new class file without ever modifying the main processing loop.
 - Use FF factors for benchmarking/orthogonalization via `load_ff_factors()` and `regress_on_ff`.
-- FF regression uses lightweight OLS (numpy + scipy for p-values) to keep the pipeline lean.
+- FF regression uses lightweight OLS (numpy + scipy for p-values) to keep the pipeline lean and enhance running efficiency.
 - parallel run option implemented for efficient computation leveraging python built-in concurrent method `ThreadPoolExecutor`.
 
 ## References

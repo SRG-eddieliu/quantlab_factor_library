@@ -40,6 +40,11 @@ from .industry_momentum import IndustryMomentum
 from .max_daily_return import MaxDailyReturn
 from .ev_to_ebitda import EVToEBITDA
 from .investment_to_assets import InvestmentToAssets
+from .composite_momentum import CompositeMomentum
+from .industry_co_momentum import IndustryCoMomentum
+from .volume_inclusive_icm import VolumeInclusiveICM
+from .industry_co_reversal import IndustryCoReversal
+from .size_proxies import LogTotalAssets, LogEnterpriseValue, LogRevenue
 from .piotroski_fscore import PiotroskiFScore
 from .atr import AverageTrueRange
 from .obv import OnBalanceVolume
@@ -88,9 +93,16 @@ __all__ = [
     "SalesGrowthAcceleration",
     "NetBuybackYield",
     "IndustryMomentum",
+    "CompositeMomentum",
+    "IndustryCoMomentum",
+    "VolumeInclusiveICM",
+    "IndustryCoReversal",
     "MaxDailyReturn",
     "EVToEBITDA",
     "InvestmentToAssets",
+    "LogTotalAssets",
+    "LogEnterpriseValue",
+    "LogRevenue",
     "PiotroskiFScore",
     "AverageTrueRange",
     "OnBalanceVolume",

@@ -148,6 +148,10 @@ def compute_all_analytics(
     ac = factor_autocorrelation(factor)
     decile_spread, avg_decile = factor_monotonicity(factor, fwd_returns, buckets=buckets)
     summary = summarize_analytics(ic, ac, decile_spread, avg_decile)
+    # Add longer-window IC (12m ~ 252d) for weighting diagnostics
+    ic_12m = ic.rolling(252).mean()
+    summary["ic_mean_12m"] = ic_12m.iloc[-1] if len(ic_12m) else None
+    summary["recent_ic_mean_60d"] = ic.rolling(60).mean().iloc[-1] if len(ic) else None
 
     ls_diag: dict = {}
     if run_ls_ptf:

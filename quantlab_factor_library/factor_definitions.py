@@ -29,6 +29,13 @@ from .factors import (
     ResidualVol,
     IdiosyncraticVolatility,
     ResidualMomentum,
+    CompositeMomentum,
+    IndustryCoMomentum,
+    VolumeInclusiveICM,
+    IndustryCoReversal,
+    LogTotalAssets,
+    LogEnterpriseValue,
+    LogRevenue,
     EfficiencyRatio,
     GrossProfitability,
     SalesGrowthAcceleration,
@@ -63,7 +70,11 @@ def get_default_factors() -> List:
     """
     return [
         Momentum(lookback_days=252, skip_days=21, name="momentum_12m"),
+        CompositeMomentum(),
         ResidualMomentum(),
+        IndustryCoMomentum(),
+        VolumeInclusiveICM(),
+        IndustryCoReversal(),
         Volatility(window=60, name="volatility_60d"),
         IdiosyncraticVolatility(window=60),
         DownsideVol(window=60),
@@ -113,4 +124,7 @@ def get_default_factors() -> List:
         Coskewness(window=252),
         IndustryMomentum(),
         MaxDailyReturn(window=21, name="max_daily_return_1m"),
+        LogTotalAssets(),
+        LogEnterpriseValue(),
+        LogRevenue(),
     ]
