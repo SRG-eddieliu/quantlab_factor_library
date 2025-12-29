@@ -110,8 +110,8 @@ Use the notebooks to see the sequence; re-run analytics/correlations/rolling wit
   - `theta_pure_value`: earnings_yield, book_to_price, ev_to_ebitda_inv, cashflow_yield, free_cashflow_yield.  
   - `theta_pure_quality`: profitability_roe, roa, gross_profitability, piotroski_fscore, accruals (-).  
   - `theta_shortterm_reversal`: mean_reversion_5d, max_daily_return_1m (-), high52w_proximity (-).  
-  - `theta_growth_acceleration`: sales_growth, sales_growth_accel, rd_intensity, dividend_growth.  
-  - `theta_info_forensic_drift`: sue, earnings_surprise, analyst_revision_eps_30d, benford_chi2_d1 (-), benford_chi2_d2 (-).  
+  - `theta_growth_acceleration`: sales_growth, sales_growth_accel, rd_intensity.  
+  - `theta_info_forensic_drift`: sue, earnings_surprise, analyst_revision_eps_30d, benford_chi2_d1 (-), benford_chi2_d2 (-); forward-filled then zero-filled after weighting to keep sparse event signals usable.  
   - `theta_structural_liquidity`: dollar_volume_20d (-), amihud_illiq_252d, amihud_illiq_log_20d, turnover (-).  
   - `theta_systematic_risk`: beta_252d (-), residual_vol_252d (-), downside_beta_252d (-), leverage (-), asset_growth (-), investment_to_assets (-), net_issuance (-).  
   - `theta_size_smallcap`: size_log_mktcap (-), size_log_total_assets (-), size_log_enterprise_value (-), size_log_revenue (-).
@@ -120,14 +120,14 @@ Notebook flow (see `notebooks/factor_parallel_demo.ipynb`):
 - Build/diagnose composites under all weightings (equal/inv_vol/ic_ir), using `run_composite_pipeline` with `ic_map` (IC IR) and `ls_vol_map` (LS vol) from base factor analytics.
 - Compare IC IR across weightings; select the best weighting per composite via `select_best_weights`.
 - Re-run best composites, saving full diagnostics to `diagnostics/`:
-  - `composite_analytics_summary.parquet/csv` (IC/IR, LS stats, FF regression, deciles).  
+- `composite_analytics_summary.parquet/csv` (IC/IR, LS stats, FF regression, deciles, data-quality coverage stats; composites are aggregated on the union of constituent dates/tickers, summing with `fill_value=0` so any available input contributes on a given cell, and data-quality stats drop permanently empty tickers/dates).  
   - `composite_correlation.parquet/csv` and `composite_ff_correlation.parquet/csv`.
 - Weighting for composites uses a 50/50 blend of full-sample IC IR and 12m IC when `blend_12m=True` (see notebook), plus LS vol for `inv_vol` weighting.
 - Each composite and its LS PnL are also saved to `data/factors/` (wide→long parquet) alongside the raw factors.
 
 ## Outputs
 - Factors: `../data/factors/factor_<name>.parquet` (long format: Date, Ticker, Value).
-- Registry: `../data/factors/factor_analytics_summary.parquet` (mean IC, IC t-stat, IC IR, mean autocorr, decile spread, LS stats, FF alpha/betas).
+- Registry: `../data/factors/factor_analytics_summary.parquet` (mean IC, IC t-stat, IC IR, mean autocorr, decile spread, LS stats, FF alpha/betas, data-quality coverage stats).
 - Correlation: `../data/factors/factor_correlation.parquet` (and FF corr) with CSV mirrors in `diagnostics/` for quick inspection.
 - FF time series: `../data/factors/factor_ff_timeseries.parquet` for benchmarking/orthogonalization.
 

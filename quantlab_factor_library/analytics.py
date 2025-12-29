@@ -12,6 +12,42 @@ from .paths import factors_dir, repo_root
 logger = logging.getLogger(__name__)
 
 
+def _data_quality_stats(df: pd.DataFrame) -> Dict[str, float]:
+    """
+    Basic coverage diagnostics for a factor/composite panel.
+    """
+    if df is None or df.empty:
+        return {
+            "dq_total_dates": 0,
+            "dq_total_tickers": 0,
+            "dq_non_null_obs": 0,
+            "dq_pct_non_null": np.nan,
+            "dq_mean_coverage": np.nan,
+            "dq_median_coverage": np.nan,
+            "dq_min_coverage": np.nan,
+            "dq_pct_allnan_dates": np.nan,
+        }
+    # Drop permanently empty rows/cols to avoid penalizing all-NaN tickers/dates
+    df_use = df.loc[df.notna().any(axis=1), df.notna().any(axis=0)]
+    total_dates = df_use.index.nunique()
+    total_tickers = df_use.columns.nunique()
+    total_cells = total_dates * total_tickers
+    non_null = int(df_use.notna().sum().sum())
+    pct_non_null = non_null / total_cells if total_cells else np.nan
+    coverage = df_use.notna().mean(axis=1) if total_tickers else pd.Series(dtype=float)
+    all_nan_dates = df_use.isna().all(axis=1)
+    return {
+        "dq_total_dates": total_dates,
+        "dq_total_tickers": total_tickers,
+        "dq_non_null_obs": non_null,
+        "dq_pct_non_null": pct_non_null,
+        "dq_mean_coverage": coverage.mean() if not coverage.empty else np.nan,
+        "dq_median_coverage": coverage.median() if not coverage.empty else np.nan,
+        "dq_min_coverage": coverage.min() if not coverage.empty else np.nan,
+        "dq_pct_allnan_dates": all_nan_dates.mean() if len(all_nan_dates) else np.nan,
+    }
+
+
 def _spearman(x: pd.Series, y: pd.Series) -> float:
     if x.dropna().empty or y.dropna().empty:
         return np.nan
@@ -148,6 +184,7 @@ def compute_all_analytics(
     ac = factor_autocorrelation(factor)
     decile_spread, avg_decile = factor_monotonicity(factor, fwd_returns, buckets=buckets)
     summary = summarize_analytics(ic, ac, decile_spread, avg_decile)
+    summary.update(_data_quality_stats(factor))
     # Add longer-window IC (12m ~ 252d) for weighting diagnostics
     ic_12m = ic.rolling(252).mean()
     summary["ic_mean_12m"] = ic_12m.iloc[-1] if len(ic_12m) else None

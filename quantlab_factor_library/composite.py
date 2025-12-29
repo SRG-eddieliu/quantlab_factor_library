@@ -146,10 +146,13 @@ def build_composite(
             num = adj * w
             den = adj.notna() * w
         else:
-            num = num + adj * w
-            den = den + adj.notna() * w
+            num = num.add(adj * w, fill_value=0)
+            den = den.add(adj.notna() * w, fill_value=0)
     comp = num.where(den != 0)
     comp = comp / den.replace(0, np.nan)
+    if name == "theta_info_forensic_drift":
+        # Sparse by construction (event-driven); forward-fill then zero-fill to keep cross-sections usable downstream.
+        comp = comp.ffill().fillna(0)
     comp.name = name
     return comp
 

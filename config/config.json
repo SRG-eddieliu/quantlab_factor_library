@@ -49,7 +49,7 @@
       "weight_method": "equal"
     },
     "theta_growth_acceleration": {
-      "factors": ["sales_growth", "sales_growth_accel", "rd_intensity", "dividend_growth"],
+      "factors": ["sales_growth", "sales_growth_accel", "rd_intensity"],
       "weight_method": "equal"
     },
     "theta_info_forensic_drift": {
